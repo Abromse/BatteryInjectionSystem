@@ -1,0 +1,6 @@
+@BatteryInjection.MES.Simulator_HostAddress = http://localhost:5293
+
+GET {{BatteryInjection.MES.Simulator_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

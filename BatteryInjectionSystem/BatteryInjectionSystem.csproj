@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BatteryInjection.Common\BatteryInjection.Common.csproj" />
+    <ProjectReference Include="..\BatteryInjection.DataAccess\BatteryInjection.DataAccess.csproj" />
+    <ProjectReference Include="..\BatteryInjection.Device\BatteryInjection.Device.csproj" />
+    <ProjectReference Include="..\BatteryInjection.MES.Client\BatteryInjection.MES.Client.csproj" />
+    <ProjectReference Include="..\BatteryInjection.Models\BatteryInjection.Models.csproj" />
+  </ItemGroup>
+
+</Project>
