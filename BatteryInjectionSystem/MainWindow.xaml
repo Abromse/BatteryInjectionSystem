@@ -5,8 +5,17 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:BatteryInjectionSystem"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="电池注液上位机系统" Height="450" Width="800">
     <Grid>
+        <StackPanel Margin="20">
+            <TextBlock Text="电池注液上位机系统" FontSize="24" FontWeight="Bold" Margin="0,0,0,20" HorizontalAlignment="Center"/>
+            <TextBlock Text="Day 2 测试：SqlSugar 建库建表" FontSize="20" Margin="0,0,0,20"/>
+            <Button Content="初始化数据库并插入测试数据" 
+                    Click="BtnTest_Click" 
+                    Height="40" Width="300" 
+                    HorizontalAlignment="Left"/>
+            <TextBlock x:Name="TxtResult" Margin="0,20,0,0" TextWrapping="Wrap"/>
 
+        </StackPanel>
     </Grid>
 </Window>
