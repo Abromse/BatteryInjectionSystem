@@ -8,12 +8,26 @@
         Title="电池注液上位机系统" Height="450" Width="800">
     <Grid>
         <StackPanel Margin="20">
-            <TextBlock Text="电池注液上位机系统" FontSize="24" FontWeight="Bold" Margin="0,0,0,20" HorizontalAlignment="Center"/>
-            <TextBlock Text="Day 2 测试：SqlSugar 建库建表" FontSize="20" Margin="0,0,0,20"/>
-            <Button Content="初始化数据库并插入测试数据" 
-                    Click="BtnTest_Click" 
-                    Height="40" Width="300" 
-                    HorizontalAlignment="Left"/>
+            <TextBlock Text="Day 3 测试：Modbus TCP 通信" FontSize="20" Margin="0,0,0,20"/>
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                <TextBlock Text="IP：" VerticalAlignment="Center"/>
+                <TextBox x:Name="TxtIp" Text="127.0.0.1" Width="120" Margin="5,0"/>
+                <TextBlock Text="端口：" VerticalAlignment="Center"/>
+                <TextBox x:Name="TxtPort" Text="502" Width="60" Margin="5,0"/>
+                <Button Content="连接" Click="BtnConnect_Click" Width="80" Margin="10,0"/>
+                <Button Content="断开" Click="BtnDisconnect_Click" Width="80" Margin="5,0"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                <TextBlock Text="从站ID：" VerticalAlignment="Center"/>
+                <TextBox x:Name="TxtSlaveId" Text="1" Width="40" Margin="5,0"/>
+                <TextBlock Text="起始地址：" VerticalAlignment="Center"/>
+                <TextBox x:Name="TxtStartAddr" Text="0" Width="50" Margin="5,0"/>
+                <TextBlock Text="数量：" VerticalAlignment="Center"/>
+                <TextBox x:Name="TxtCount" Text="5" Width="40" Margin="5,0"/>
+                <Button Content="读取寄存器" Click="BtnRead_Click" Width="100" Margin="10,0"/>
+            </StackPanel>
             <TextBlock x:Name="TxtResult" Margin="0,20,0,0" TextWrapping="Wrap"/>
 
         </StackPanel>
