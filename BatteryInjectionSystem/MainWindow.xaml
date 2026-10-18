@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:BatteryInjectionSystem"
         mc:Ignorable="d"
         Title="电池注液上位机系统" Height="450" Width="800">
-    <Grid>
+    <!--<Grid>
         <StackPanel Margin="20">
             <TextBlock Text="Day 3 测试：Modbus TCP 通信" FontSize="20" Margin="0,0,0,20"/>
 
@@ -30,6 +30,77 @@
             </StackPanel>
             <TextBlock x:Name="TxtResult" Margin="0,20,0,0" TextWrapping="Wrap"/>
 
+        </StackPanel>
+    </Grid>-->
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+
+        <!-- 连接区 -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="IP：" VerticalAlignment="Center"/>
+            <TextBox x:Name="TxtIp" Text="{Binding Ip, UpdateSourceTrigger=PropertyChanged}" Width="120" Margin="5,0"/>
+            <TextBlock Text="端口：" VerticalAlignment="Center"/>
+            <TextBox x:Name="TxtPort" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}" Width="60" Margin="5,0"/>
+            <Button Content="连接" Command="{Binding ConnectCommand}" Width="80" Margin="10,0"/>
+            <Button Content="断开" Command="{Binding DisconnectCommand}" Width="80" Margin="5,0"/>
+            <Button Content="开始采集" Command="{Binding StartCollectCommand}" Width="100" Margin="10,0"/>
+            <Button Content="停止采集" Command="{Binding StopCollectCommand}" Width="100" Margin="5,0"/>
+        </StackPanel>
+
+
+        <!-- 实时数据显示 -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="注液前重量：" VerticalAlignment="Center"/>
+            <TextBlock x:Name="TxtBeforeWeight" Text="{Binding BeforeWeight}" FontSize="18" FontWeight="Bold" Foreground="Blue" Margin="5,0,20,0"/>
+            <TextBlock Text="注液后重量：" VerticalAlignment="Center"/>
+            <TextBlock x:Name="TxtAfterWeight" Text="{Binding AfterWeight}" FontSize="18" FontWeight="Bold" Foreground="Blue" Margin="5,0,20,0"/>
+            <TextBlock Text="注液量：" VerticalAlignment="Center"/>
+            <TextBlock x:Name="TxtInjectionAmount" Text="{Binding InjectionAmount}" FontSize="18" FontWeight="Bold" Foreground="Green" Margin="5,0,20,0"/>
+            <TextBlock Text="连接：" VerticalAlignment="Center"/>
+            <TextBlock x:Name="TxtResult" Text="{Binding ResultText}" FontSize="18" FontWeight="Bold" Foreground="Green" Margin="5,0,20,0"/>
+        </StackPanel>
+
+        <!-- 历史记录 -->
+        <!-- 去掉了 x:Name="DgRecords"，添加了 ItemsSource 绑定 -->
+        <DataGrid Grid.Row="3" ItemsSource="{Binding Records}" AutoGenerateColumns="False" IsReadOnly="True" Margin="0,10,0,10">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="50"/>
+                <DataGridTextColumn Header="条码" Binding="{Binding Barcode}" Width="180"/>
+                <DataGridTextColumn Header="注液前" Binding="{Binding BeforeWeight}" Width="100"/>
+                <DataGridTextColumn Header="注液后" Binding="{Binding AfterWeight}" Width="100"/>
+                <DataGridTextColumn Header="注液量" Binding="{Binding InjectionAmount}" Width="100"/>
+                <DataGridTextColumn Header="合格" Binding="{Binding IsPass}" Width="60"/>
+                <DataGridTextColumn Header="时间" Binding="{Binding CreatedAt}" Width="150"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- 操作区 -->
+        <StackPanel Grid.Row="4" Orientation="Horizontal">
+            <TextBlock Text="电芯条码：" VerticalAlignment="Center"/>
+            <TextBox x:Name="TxtBarcode" Text="{Binding Barcode, UpdateSourceTrigger=PropertyChanged}" Width="200" Margin="5,0"/>
+            <Button Content="执行注液流程" Command="{Binding InjectCommand}" Width="120" Margin="10,0" Background="Orange"/>
+            <Button Content="刷新记录" Command="{Binding RefreshRecordsCommand}" Width="100" Margin="5,0"/>
+        </StackPanel>
+        <!-- Day 5 新增：称重设备连接区 (Grid.Row="5") -->
+        <StackPanel Grid.Row="5" Orientation="Horizontal" Margin="0,15,0,0">
+            <TextBlock Text="称重仪 IP：" VerticalAlignment="Center" Foreground="DarkGreen"/>
+            <TextBox Text="{Binding WeightIp, UpdateSourceTrigger=PropertyChanged}" Width="120" Margin="5,0"/>
+            <TextBlock Text="端口：" VerticalAlignment="Center" Foreground="DarkGreen"/>
+            <TextBox Text="{Binding WeightPort, UpdateSourceTrigger=PropertyChanged}" Width="60" Margin="5,0"/>
+            <Button Content="连接称重仪" Command="{Binding ConnectWeightCommand}" Width="100" Margin="10,0" Background="LightGreen"/>
+            <Button Content="断开称重仪" Command="{Binding DisconnectWeightCommand}" Width="100" Margin="5,0"/>
+
+            <TextBlock Text="当前重量：" VerticalAlignment="Center" Margin="20,0,0,0" FontWeight="Bold"/>
+            <TextBlock Text="{Binding CurrentWeight}" FontSize="20" FontWeight="Bold" Foreground="Red" Margin="5,0"/>
+            <TextBlock Text="g" VerticalAlignment="Center" FontSize="16"/>
         </StackPanel>
     </Grid>
 </Window>
