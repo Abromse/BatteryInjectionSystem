@@ -1,0 +1,7 @@
+﻿[*.cs]
+
+# CS8601: 引用类型赋值可能为 null。
+dotnet_diagnostic.CS8601.severity = silent
+
+# CS8604: 引用类型参数可能为 null。
+dotnet_diagnostic.CS8604.severity = silent

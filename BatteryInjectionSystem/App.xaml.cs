@@ -1,4 +1,5 @@
-﻿using System.Configuration;
+﻿using BatteryInjection.Common;
+using System.Configuration;
 using System.Data;
 using System.Reflection;
 using System.Windows;
@@ -30,9 +31,26 @@ namespace BatteryInjectionSystem
                 }
                 return null;
             };
-
             base.OnStartup(e);
+            Logger.Info("======== 电池注液上位机系统启动 ========");
+            this.DispatcherUnhandledException += (sender, args) =>
+            {
+                string msg = args.Exception.ToString();
+                Logger.Error(msg);
+                MessageBox.Show($"系统发生未处理异常：\n{args.Exception.Message}", "错误提示", MessageBoxButton.OK, MessageBoxImage.Error);
+                args.Handled = true;
+            };
+            AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
+            {
+                Exception ex = args.ExceptionObject as Exception;
+                if (ex != null)
+                {
+                    Logger.Error($"【后台线程致命异常】程序即将崩溃！\n{ex.ToString()}");
+                    MessageBox.Show($"无法恢复的错误:{ex.Message}", "致命错误", MessageBoxButton.OK, MessageBoxImage.Stop);
+                }
+            };
         }
+                
     }
 
 }

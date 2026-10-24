@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BatteryInjection.Common;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
@@ -69,9 +70,9 @@ namespace BatteryInjection.Device
                     }
                 }
             }
-            catch
+            catch(Exception ex)
             {
-                // 忽略断开时的异常
+                Logger.Error($"WeightService连接失败,错误信息:{ex.Message}");
             }
         }
     }

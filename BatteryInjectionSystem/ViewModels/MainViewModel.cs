@@ -1,16 +1,20 @@
-﻿using BatteryInjection.DataAccess;
+﻿using BatteryInjection.Common;
+using BatteryInjection.DataAccess;
 using BatteryInjection.Device;
+using BatteryInjection.MES.Client;
 using BatteryInjection.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using System.IO;
 
 namespace BatteryInjectionSystem.ViewModels
 {
@@ -19,9 +23,12 @@ namespace BatteryInjectionSystem.ViewModels
         private readonly DbHelper _dbHelper = new();
         private readonly PlcService _plcService = new();
         private readonly DispatcherTimer _timer = new();
+        private readonly MesApiService _mesApiService;
         private BatteryCell? _currentCell;
         private readonly WeightDeviceService _weightService = new();
+        private readonly UdpService _udpService = new();
         #region 属性绑定
+        
         [ObservableProperty] private string _ip = "127.0.0.1";
         [ObservableProperty] private string _port = "502";
         [ObservableProperty] private string _slaveId = "1";
@@ -34,11 +41,14 @@ namespace BatteryInjectionSystem.ViewModels
         [ObservableProperty] private string _beforeWeight = "--";
         [ObservableProperty] private string _afterWeight = "--";
         [ObservableProperty] private string _injectionAmount = "--";
+        [ObservableProperty] private string _mesReflection = "--";
 
         //TCP
         [ObservableProperty] private string _weightIp = "127.0.0.1";
         [ObservableProperty] private string _weightPort = "8888";
         [ObservableProperty] private string _currentWeight = "--";
+
+        [ObservableProperty] private string _udpStatus = "UDP未启动";
 
         // 表格数据源
         public ObservableCollection<InjectionRecord> Records { get; } = new();
@@ -46,11 +56,28 @@ namespace BatteryInjectionSystem.ViewModels
 
         public MainViewModel()
         {
+            var config = JsonHelper.LoadConfig();
+            Ip = config.PlcIp;
+            Port = config.PlcPort.ToString();
+            WeightIp = config.PlcIp;
+            WeightPort = config.TcpPort.ToString();
+            _mesApiService = new MesApiService(config.MesUrl);
+            var result = File.ReadAllText("config.json");
+            var changed = JsonSerializer.Deserialize<InjectionRecord>(result);
             // 初始化定时器：每秒读取一次 PLC
             _timer.Interval = TimeSpan.FromSeconds(1);
             _timer.Tick += Timer_Tick;
             _dbHelper.InitDatabase();
             RefreshRecords();
+            _udpService.MessageReceived += (msg) =>
+            {
+                Logger.Info($"底层收到了UDP消息：{msg}");
+                App.Current.Dispatcher?.Invoke(() =>
+                {
+                    UdpStatus = $"收到UDP心跳: {msg}";
+                });
+            };
+            _udpService.Connect(9000);
         }
         //命令区
         [RelayCommand]
@@ -58,6 +85,14 @@ namespace BatteryInjectionSystem.ViewModels
         {
             var ok = await _plcService.ConnectAsync(Ip, int.Parse(Port));
             ResultText = ok ? "连接成功" : "连接失败";
+            if(ok)
+            {
+                Logger.Info($"成功连接 PLC，IP: {Ip}, 端口: {Port}");
+            }
+            else
+            {
+                Logger.Info($"连接PLC，IP: {Ip}, 端口: {Port}失败");
+            }
         }
 
         [RelayCommand]
@@ -107,7 +142,7 @@ namespace BatteryInjectionSystem.ViewModels
             _timer.Stop();
         }
 
-        [RelayCommand]
+        [RelayCommand(AllowConcurrentExecutions = false)]
         private async Task InjectAsync()
         {
             if (string.IsNullOrEmpty(Barcode))
@@ -118,12 +153,12 @@ namespace BatteryInjectionSystem.ViewModels
 
             try
             {
-                _dbHelper.InsertCell(new BatteryCell { Barcode = Barcode, Model = "IFR18650-2000", CreatedAt = DateTime.Now });
+                _dbHelper.InsertCell(new BatteryCell { Barcode = Barcode, Model = " ", CreatedAt = DateTime.Now });
 
                 var beforeValues = _plcService.ReadHoldingRegisters(1, 0, 1);
                 var beforeWeight = beforeValues[0];
 
-                _plcService.WriteSingleRegister(1, 10, 1);
+                _plcService.WriteSingleRegister(1, 5, 1);
                 await Task.Delay(3000);
 
                 var afterValues = _plcService.ReadHoldingRegisters(1, 1, 1);
@@ -131,8 +166,8 @@ namespace BatteryInjectionSystem.ViewModels
 
                 var amount = afterWeight - beforeWeight;
                 var isPass = amount > 0 && amount < 500;
-
-                _dbHelper.InsertInjectionRecord(new InjectionRecord
+                Logger.Info($"电芯 {Barcode} 注液后重量：{afterWeight}，实际注液量：{amount}，判定：{(isPass ? "合格" : "不合格")}");
+                var record=new InjectionRecord
                 {
                     Barcode = Barcode,
                     BeforeWeight = beforeWeight,
@@ -140,14 +175,28 @@ namespace BatteryInjectionSystem.ViewModels
                     InjectionAmount = amount,
                     IsPass = isPass,
                     CreatedAt = DateTime.Now
-                });
-
+                };
+                _dbHelper.InsertInjectionRecord(record);
                 RefreshRecords();
-                MessageBox.Show($"注液完成！注液量：{amount}，判定：{(isPass ? "合格" : "不合格")}");
+                bool isReportSuccess = await _mesApiService.ReportInjectionAsync(record);
+                if (isReportSuccess)
+                    Logger.Info($"电芯 {Barcode} 数据成功上报 MES");
+                else
+                    Logger.Error($"电芯 {Barcode} 数据上报 MES 失败！");
+                if (isReportSuccess)
+                {
+                    MesReflection= "注液完成，且已成功上报MES！";
+                }
+                else
+                {
+                    MesReflection = "注液完成，但上报MES失败！";
+                }
+                    MessageBox.Show($"注液完成！注液量：{amount}，判定：{(isPass ? "合格" : "不合格")}");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"注液流程出错：{ex.Message}");
+                Logger.Error($"注液流程出错,条码:{Barcode},错误信息:{ex.Message}");
+                MessageBox.Show($"注液流程出错：{ex.ToString()}");
             }
         }
 
@@ -181,32 +230,33 @@ namespace BatteryInjectionSystem.ViewModels
             }
         }
           // ==== Day 5 新增：连接称重设备命令 ====
-    [RelayCommand]
-    private async Task ConnectWeightAsync()
-    {
-        // 先订阅事件（防止重复订阅，先减再加）
-        _weightService.WeightReceived -= OnWeightReceived;
-        _weightService.WeightReceived += OnWeightReceived;
-
-        var ok = await _weightService.ConnectAsync(WeightIp, int.Parse(WeightPort));
-        ResultText = ok ? "称重仪连接成功" : "称重仪连接失败";
-    }
-
-    [RelayCommand]
-    private void DisconnectWeight()
-    {
-        _weightService.Disconnect();
-        ResultText = "称重仪已断开";
-    }
-
-    // ==== Day 5 新增：接收数据回调 ====
-    private void OnWeightReceived(decimal weight)
-    {
-        // 注意：事件是在后台线程触发的，需要切回 UI 线程更新界面
-        App.Current.Dispatcher.Invoke(() =>
+        [RelayCommand]
+        private async Task ConnectWeightAsync()
         {
-            CurrentWeight = weight.ToString("F2"); // 保留两位小数
-        });
-    }
+            // 先订阅事件（防止重复订阅，先减再加）
+            _weightService.WeightReceived -= OnWeightReceived;
+            _weightService.WeightReceived += OnWeightReceived;
+
+            var ok = await _weightService.ConnectAsync(WeightIp, int.Parse(WeightPort));
+            ResultText = ok ? "称重仪连接成功" : "称重仪连接失败";
+        }
+
+        [RelayCommand]
+        private void DisconnectWeight()
+        {
+            _weightService.Disconnect();
+            ResultText = "称重仪已断开";
+        }
+
+        // ==== Day 5 新增：接收数据回调 ====
+        private void OnWeightReceived(decimal weight)
+        {
+            // 注意：事件是在后台线程触发的，需要切回 UI 线程更新界面
+            App.Current.Dispatcher.Invoke(() =>
+            {
+                CurrentWeight = weight.ToString("F2"); // 保留两位小数
+            });
+        }
+
     }
 }

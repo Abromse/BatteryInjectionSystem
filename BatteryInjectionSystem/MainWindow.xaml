@@ -4,8 +4,13 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:BatteryInjectionSystem"
+        xmlns:conv="clr-namespace:BatteryInjectionSystem.Converters"
         mc:Ignorable="d"
         Title="电池注液上位机系统" Height="450" Width="800">
+    <Window.Resources>
+        <conv:BoolToBrushConverter x:Key="BoolToBrush"/>
+        <conv:StatusToColorConverter x:Key="StatusToBrush"/>
+    </Window.Resources>
     <!--<Grid>
         <StackPanel Margin="20">
             <TextBlock Text="Day 3 测试：Modbus TCP 通信" FontSize="20" Margin="0,0,0,20"/>
@@ -41,10 +46,10 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-
-
         <!-- 连接区 -->
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+            <Ellipse Width="20" Height="20" Margin="10,0" 
+         Fill="{Binding ResultText, Converter={StaticResource StatusToBrush}}"/>
             <TextBlock Text="IP：" VerticalAlignment="Center"/>
             <TextBox x:Name="TxtIp" Text="{Binding Ip, UpdateSourceTrigger=PropertyChanged}" Width="120" Margin="5,0"/>
             <TextBlock Text="端口：" VerticalAlignment="Center"/>
@@ -77,7 +82,14 @@
                 <DataGridTextColumn Header="注液前" Binding="{Binding BeforeWeight}" Width="100"/>
                 <DataGridTextColumn Header="注液后" Binding="{Binding AfterWeight}" Width="100"/>
                 <DataGridTextColumn Header="注液量" Binding="{Binding InjectionAmount}" Width="100"/>
-                <DataGridTextColumn Header="合格" Binding="{Binding IsPass}" Width="60"/>
+                <DataGridTextColumn Header="合格" Binding="{Binding IsPass}" Width="60">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{Binding IsPass, Converter={StaticResource BoolToBrush}}"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
                 <DataGridTextColumn Header="时间" Binding="{Binding CreatedAt}" Width="150"/>
             </DataGrid.Columns>
         </DataGrid>
@@ -100,7 +112,9 @@
 
             <TextBlock Text="当前重量：" VerticalAlignment="Center" Margin="20,0,0,0" FontWeight="Bold"/>
             <TextBlock Text="{Binding CurrentWeight}" FontSize="20" FontWeight="Bold" Foreground="Red" Margin="5,0"/>
-            <TextBlock Text="g" VerticalAlignment="Center" FontSize="16"/>
+            <TextBlock Text="g" VerticalAlignment="Center" FontSize="16" Margin="0,0,30,0"/>
+            <TextBlock Text="{Binding MesReflection}" VerticalAlignment="Center" FontSize="16"/>
+            <TextBlock Text="{Binding UdpStatus}" Foreground="Purple" FontWeight="Bold" Margin="20,0,0,0" VerticalAlignment="Center"/>
         </StackPanel>
     </Grid>
 </Window>

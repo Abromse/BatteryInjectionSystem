@@ -1,0 +1,7 @@
+﻿{
+  "PlcIp": "127.0.0.1",
+  "PlcPort": 502,
+  "TcpPort": 8888,
+  "UdpPort": 9000,
+  "MesUrl": "https://localhost:7138/api/injection/report"
+}

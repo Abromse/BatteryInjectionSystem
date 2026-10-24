@@ -1,3 +1,4 @@
+using BatteryInjection.Common;
 using NModbus;
 using NModbus.Device;
 using System.Net.Sockets;
@@ -24,8 +25,9 @@ namespace BatteryInjection.Device
                 _master = factory.CreateMaster(_tcpClient);
                 return true;
             }
-            catch
+            catch(Exception ex)
             {
+                Logger.Error($"PLC连接失败,错误信息:{ex.Message}");
                 return false;
             }
         }
