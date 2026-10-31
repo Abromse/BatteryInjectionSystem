@@ -1,6 +1,7 @@
 ﻿using BatteryInjection.DataAccess;
 using BatteryInjection.Device;
 using BatteryInjection.Models;
+using BatteryInjectionSystem.ViewModels;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -21,10 +22,25 @@ namespace BatteryInjectionSystem
     public partial class MainWindow : Window
     {
         
-        public MainWindow()
+        public MainWindow(string userName,string role)
         {
             InitializeComponent();
-           DataContext = new ViewModels.MainViewModel();
+           var vm = new ViewModels.MainViewModel(userName,role);
+            vm.LoginRequest += () =>
+            {
+                DialogResult = true;
+                Close();
+            };
+            DataContext =vm;
+        }
+        protected override void OnClosed(EventArgs e)
+        {
+            // 如果 DataContext 是 MainViewModel，就调用它的 Shutdown 方法
+            if (DataContext is MainViewModel vm)
+            {
+                vm.Shutdown();
+            }
+            base.OnClosed(e);
         }
     }
 }

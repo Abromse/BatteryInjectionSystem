@@ -4,12 +4,21 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:BatteryInjectionSystem"
-        xmlns:conv="clr-namespace:BatteryInjectionSystem.Converters"
+        xmlns:converter="clr-namespace:BatteryInjectionSystem.Converters"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
-        Title="电池注液上位机系统" Height="450" Width="800">
+        Title="电池注液上位机系统" Height="800"
+        Width="1400"
+        WindowState="Maximized"
+         FontFamily="Microsoft YaHei UI"
+        UseLayoutRounding="True" 
+        SnapsToDevicePixels="True"
+        ResizeMode="NoResize"
+        WindowStyle="None"
+        Style="{StaticResource MaterialDesignWindow}">
     <Window.Resources>
-        <conv:BoolToBrushConverter x:Key="BoolToBrush"/>
-        <conv:StatusToColorConverter x:Key="StatusToBrush"/>
+        <converter:BoolToBrushConverter x:Key="BoolToBrush"/>
+        <converter:StatusToColorConverter x:Key="StatusToBrush"/>
     </Window.Resources>
     <!--<Grid>
         <StackPanel Margin="20">
@@ -48,16 +57,45 @@
         </Grid.RowDefinitions>
         <!-- 连接区 -->
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
-            <Ellipse Width="20" Height="20" Margin="10,0" 
-         Fill="{Binding ResultText, Converter={StaticResource StatusToBrush}}"/>
-            <TextBlock Text="IP：" VerticalAlignment="Center"/>
-            <TextBox x:Name="TxtIp" Text="{Binding Ip, UpdateSourceTrigger=PropertyChanged}" Width="120" Margin="5,0"/>
+            <materialDesign:PackIcon Width="24" Height="24" VerticalAlignment="Center" Margin="10,0">
+                <materialDesign:PackIcon.Style>
+                    <Style TargetType="materialDesign:PackIcon">
+                        <!-- 1. 默认状态：灰色问号 -->
+                        <Setter Property="Kind" Value="HelpCircleOutline"/>
+                        <Setter Property="Foreground" Value="Gray"/>
+
+                        <!-- 2. 状态触发器 -->
+                        <Style.Triggers>
+                            <!-- 当 ResultText 包含“成功”或“已连接”时，变成绿色打勾 -->
+                            <DataTrigger Binding="{Binding ResultText}" Value="连接成功">
+                                <Setter Property="Kind" Value="CheckCircle"/>
+                                <Setter Property="Foreground" Value="Green"/>
+                            </DataTrigger>
+
+                            <!-- 当 ResultText 包含“失败”或“断开”时，变成红色警告 -->
+                            <DataTrigger Binding="{Binding ResultText}" Value="连接失败">
+                                <Setter Property="Kind" Value="AlertCircle"/>
+                                <Setter Property="Foreground" Value="Red"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </materialDesign:PackIcon.Style>
+            </materialDesign:PackIcon>
+            <TextBox x:Name="TxtIp" Text="{Binding Ip, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" Width="120" Margin="5,0"/>
             <TextBlock Text="端口：" VerticalAlignment="Center"/>
-            <TextBox x:Name="TxtPort" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}" Width="60" Margin="5,0"/>
+            <TextBox x:Name="TxtPort" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" Width="60" Margin="5,0"/>
             <Button Content="连接" Command="{Binding ConnectCommand}" Width="80" Margin="10,0"/>
             <Button Content="断开" Command="{Binding DisconnectCommand}" Width="80" Margin="5,0"/>
-            <Button Content="开始采集" Command="{Binding StartCollectCommand}" Width="100" Margin="10,0"/>
+            <Button  Command="{Binding StartCollectCommand}" Width="100" Margin="10,0">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="Play" Width="24" Height="24" />
+                    <TextBlock Text="启动" Margin="8,3,0,0" />
+                </StackPanel>
+            </Button>
             <Button Content="停止采集" Command="{Binding StopCollectCommand}" Width="100" Margin="5,0"/>
+            <TextBlock Text="当前用户：" FontSize="20" Margin="10,15,0,0" FontWeight="Black"/>
+            <TextBlock Text="{Binding UserName}" FontSize="20" HorizontalAlignment="Center" Margin="10,15,0,0" />
+            <Button Content="注销" Command="{Binding LoginOutCommand}"  Width="100" Margin="400,0,0,0"/>
         </StackPanel>
 
 
@@ -75,14 +113,14 @@
 
         <!-- 历史记录 -->
         <!-- 去掉了 x:Name="DgRecords"，添加了 ItemsSource 绑定 -->
-        <DataGrid Grid.Row="3" ItemsSource="{Binding Records}" AutoGenerateColumns="False" IsReadOnly="True" Margin="0,10,0,10">
+        <DataGrid Grid.Row="3" ItemsSource="{Binding Records}" SelectedItem="{Binding SelectedRecord}" AutoGenerateColumns="False" IsReadOnly="True" Margin="0,10,0,10">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="50"/>
+                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60"/>
                 <DataGridTextColumn Header="条码" Binding="{Binding Barcode}" Width="180"/>
                 <DataGridTextColumn Header="注液前" Binding="{Binding BeforeWeight}" Width="100"/>
                 <DataGridTextColumn Header="注液后" Binding="{Binding AfterWeight}" Width="100"/>
                 <DataGridTextColumn Header="注液量" Binding="{Binding InjectionAmount}" Width="100"/>
-                <DataGridTextColumn Header="合格" Binding="{Binding IsPass}" Width="60">
+                <DataGridTextColumn Header="合格" Binding="{Binding IsPass}" Width="100">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="Foreground" Value="{Binding IsPass, Converter={StaticResource BoolToBrush}}"/>
@@ -90,7 +128,14 @@
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
-                <DataGridTextColumn Header="时间" Binding="{Binding CreatedAt}" Width="150"/>
+                <DataGridTextColumn Header="时间" Binding="{Binding CreatedAt}" Width="180"/>
+                <DataGridTemplateColumn>
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="删除" Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Width="80"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
 
@@ -115,6 +160,7 @@
             <TextBlock Text="g" VerticalAlignment="Center" FontSize="16" Margin="0,0,30,0"/>
             <TextBlock Text="{Binding MesReflection}" VerticalAlignment="Center" FontSize="16"/>
             <TextBlock Text="{Binding UdpStatus}" Foreground="Purple" FontWeight="Bold" Margin="20,0,0,0" VerticalAlignment="Center"/>
+            <Button Content="退出系统" Command="{Binding ExitCommand}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10"/>
         </StackPanel>
     </Grid>
 </Window>

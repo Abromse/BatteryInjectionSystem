@@ -49,8 +49,37 @@ namespace BatteryInjectionSystem
                     MessageBox.Show($"无法恢复的错误:{ex.Message}", "致命错误", MessageBoxButton.OK, MessageBoxImage.Stop);
                 }
             };
+
+           while (true)
+            {
+                LoginWindow loginWindow = new LoginWindow();
+                bool? result = loginWindow.ShowDialog();
+                if (result == true)
+                {
+                    MainWindow main = new MainWindow(loginWindow.loginUserName, loginWindow.role);
+                    main.ShowDialog();
+                    if (main.DialogResult == true)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                else
+                {
+                    Application.Current.Shutdown();
+                    break;
+                }
+            }
         }
-                
+        protected override void OnExit(ExitEventArgs e)
+        {   
+            Logger.Info("======== 电池注液上位机系统已安全退出 ========");
+            base.OnExit(e);
+        }
+
     }
 
 }

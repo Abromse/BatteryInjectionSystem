@@ -5,21 +5,18 @@ using BatteryInjection.MES.Client;
 using BatteryInjection.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using System;
-using System.Collections.Generic;
-using System.Text.Json;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Threading;
 using System.IO;
+using System.Text.Json;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace BatteryInjectionSystem.ViewModels
 {
-    public partial class MainViewModel: ObservableObject
+    public partial class MainViewModel : ObservableObject
     {
+        public event Action LoginRequest;
         private readonly DbHelper _dbHelper = new();
         private readonly PlcService _plcService = new();
         private readonly DispatcherTimer _timer = new();
@@ -28,7 +25,7 @@ namespace BatteryInjectionSystem.ViewModels
         private readonly WeightDeviceService _weightService = new();
         private readonly UdpService _udpService = new();
         #region 属性绑定
-        
+
         [ObservableProperty] private string _ip = "127.0.0.1";
         [ObservableProperty] private string _port = "502";
         [ObservableProperty] private string _slaveId = "1";
@@ -49,13 +46,18 @@ namespace BatteryInjectionSystem.ViewModels
         [ObservableProperty] private string _currentWeight = "--";
 
         [ObservableProperty] private string _udpStatus = "UDP未启动";
-
+        [ObservableProperty] private string _userName = "";
         // 表格数据源
         public ObservableCollection<InjectionRecord> Records { get; } = new();
+
+        [ObservableProperty] private InjectionRecord _selectedRecord;
+        [ObservableProperty] private bool _isAdmin;
         #endregion
 
-        public MainViewModel()
-        {
+        public MainViewModel(string username,string role)
+        {       
+            _userName = username;
+            _isAdmin = (role == "Admin");
             var config = JsonHelper.LoadConfig();
             Ip = config.PlcIp;
             Port = config.PlcPort.ToString();
@@ -67,7 +69,6 @@ namespace BatteryInjectionSystem.ViewModels
             // 初始化定时器：每秒读取一次 PLC
             _timer.Interval = TimeSpan.FromSeconds(1);
             _timer.Tick += Timer_Tick;
-            _dbHelper.InitDatabase();
             RefreshRecords();
             _udpService.MessageReceived += (msg) =>
             {
@@ -79,13 +80,30 @@ namespace BatteryInjectionSystem.ViewModels
             };
             _udpService.Connect(9000);
         }
+        public void Shutdown()
+        {
+            // 停止定时器
+            _timer.Stop();
+
+            // 停止 UDP 监听
+            _udpService.Stop();
+
+            // 断开 TCP 称重仪
+            _weightService.Disconnect();
+
+            // 断开 PLC
+            _plcService.Disconnect();
+
+            Logger.Info("程序正在安全退出...");
+        }
+
         //命令区
         [RelayCommand]
         private async Task ConnectAsync()
         {
             var ok = await _plcService.ConnectAsync(Ip, int.Parse(Port));
             ResultText = ok ? "连接成功" : "连接失败";
-            if(ok)
+            if (ok)
             {
                 Logger.Info($"成功连接 PLC，IP: {Ip}, 端口: {Port}");
             }
@@ -167,7 +185,7 @@ namespace BatteryInjectionSystem.ViewModels
                 var amount = afterWeight - beforeWeight;
                 var isPass = amount > 0 && amount < 500;
                 Logger.Info($"电芯 {Barcode} 注液后重量：{afterWeight}，实际注液量：{amount}，判定：{(isPass ? "合格" : "不合格")}");
-                var record=new InjectionRecord
+                var record = new InjectionRecord
                 {
                     Barcode = Barcode,
                     BeforeWeight = beforeWeight,
@@ -185,13 +203,13 @@ namespace BatteryInjectionSystem.ViewModels
                     Logger.Error($"电芯 {Barcode} 数据上报 MES 失败！");
                 if (isReportSuccess)
                 {
-                    MesReflection= "注液完成，且已成功上报MES！";
+                    MesReflection = "注液完成，且已成功上报MES！";
                 }
                 else
                 {
                     MesReflection = "注液完成，但上报MES失败！";
                 }
-                    MessageBox.Show($"注液完成！注液量：{amount}，判定：{(isPass ? "合格" : "不合格")}");
+                MessageBox.Show($"注液完成！注液量：{amount}，判定：{(isPass ? "合格" : "不合格")}");
             }
             catch (Exception ex)
             {
@@ -229,7 +247,7 @@ namespace BatteryInjectionSystem.ViewModels
                 _timer.Stop();
             }
         }
-          // ==== Day 5 新增：连接称重设备命令 ====
+        // ==== Day 5 新增：连接称重设备命令 ====
         [RelayCommand]
         private async Task ConnectWeightAsync()
         {
@@ -247,7 +265,42 @@ namespace BatteryInjectionSystem.ViewModels
             _weightService.Disconnect();
             ResultText = "称重仪已断开";
         }
+        [RelayCommand]
+        private void Exit()
+        {
+            Application.Current.Shutdown();
+        }
 
+        [RelayCommand(CanExecute =nameof(CanDelete))]
+        private void Delete(InjectionRecord record)
+        {
+            if (record == null) return;
+            var result = MessageBox.Show($"确认删除条码为{record.Barcode}的记录吗？", "删除提示", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (result == MessageBoxResult.Yes)
+            {
+                try
+                {
+
+                    _dbHelper.Delete(record.Id);
+                    Logger.Info($"用户删除了条码为 {record.Barcode} 的记录");
+                    RefreshRecords();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"删除失败:{ex.Message}");
+                    MessageBox.Show($"删除失败:{ex.Message}");
+                }
+            }  
+        }
+        [RelayCommand]
+        private void LoginOut()
+        {
+            var result = MessageBox.Show("确定要注销账号吗？", "信息提示", MessageBoxButton.YesNo);
+            if (result == MessageBoxResult.Yes)
+            {
+                LoginRequest?.Invoke();
+            }   
+        }
         // ==== Day 5 新增：接收数据回调 ====
         private void OnWeightReceived(decimal weight)
         {
@@ -257,6 +310,13 @@ namespace BatteryInjectionSystem.ViewModels
                 CurrentWeight = weight.ToString("F2"); // 保留两位小数
             });
         }
-
+        private bool CanDelete()
+        {
+            return IsAdmin;
+        }
+        partial void OnIsAdminChanged(bool value)
+        {
+            CommandManager.InvalidateRequerySuggested();
+        }
     }
 }

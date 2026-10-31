@@ -37,7 +37,73 @@ namespace BatteryInjection.DataAccess
         /// </summary>
         public void InitDatabase() 
         {
-            _dbClient.CodeFirst.InitTables<BatteryCell, InjectionRecord >();   
+            _dbClient.CodeFirst.InitTables<BatteryCell,InjectionRecord,User>();
+        }
+        /// <summary>
+        /// 初始化用户数据
+        /// </summary>
+        public void IniUser()
+        {
+            var user = _dbClient.Queryable<User>().First(u => u.Username == "admin");
+            if (user == null)
+            {
+                var admin = new User()
+                {
+                    Username = "admin",
+                    HassPassword = BCrypt.Net.BCrypt.HashPassword("12345"),
+                    Role = "Admin"
+                };
+                _dbClient.Insertable(admin).ExecuteCommand();
+            }
+            else
+            {
+                user.HassPassword = BCrypt.Net.BCrypt.HashPassword("12345");
+                _dbClient.Updateable(user).ExecuteCommand();
+            }
+        }
+        /// <summary>
+        /// 初始化用户数据
+        /// </summary>
+        public void IniCommonUser()
+        {
+            var user = _dbClient.Queryable<User>().First(u=>u.Username == "guest");
+            if(user == null)
+            {
+                var guest = new User()
+                {
+                    Username = "guest",
+                    HassPassword = BCrypt.Net.BCrypt.HashPassword("12345"),
+                    Role = "Guest"
+                };
+                _dbClient.Insertable(guest).ExecuteCommand();
+            }
+        }
+        /// <summary>
+        /// 验证登录的方法
+        /// </summary>
+        /// <returns></returns>
+        public User Login(string username, string password)
+        {
+            var user = _dbClient.Queryable<User>().First(u => u.Username == username);
+            if (user == null) return null;
+            bool isCorrect = BCrypt.Net.BCrypt.Verify(password, user.HassPassword);
+            if (isCorrect)
+            {
+                return user;
+            }
+            else
+            {
+                return null;
+            }
+        }
+        /// <summary>
+        /// 游客登录
+        /// </summary>
+        /// <returns></returns>
+        public User GetGuestUser()
+        {
+            var guest = _dbClient.Queryable<User>().First(u => u.Username == "guest");
+            return guest;
         }
         /// <summary>
         /// 插入一条电芯数据
@@ -66,6 +132,14 @@ namespace BatteryInjection.DataAccess
         public List<InjectionRecord> GetAllInjectionRecords()
         {
             return _dbClient.Queryable<InjectionRecord>().ToList();
+        }
+
+        /// <summary>
+        /// 删除一条记录
+        /// </summary>
+        public void Delete(int id)
+        {
+            _dbClient.Deleteable<InjectionRecord>().In(id).ExecuteCommand();    
         }
     }
 }
